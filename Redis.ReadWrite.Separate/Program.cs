@@ -8,7 +8,7 @@ namespace Redis.ReadWrite.Separate
     {
         static void Main(string[] args)
         {
-            FreeRedisSentinelTest();
+            HaproxyTest();
         }
 
         /// <summary>
@@ -90,6 +90,42 @@ namespace Redis.ReadWrite.Separate
                 {
                     cli.Set("freeRedis_sentinel", "使用freeRedis的哨兵模式做读写分离+高可用");
                     var value = cli.Get("freeRedis_sentinel");
+                    Console.WriteLine(value);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
+                Console.ReadLine();
+            }
+        }
+
+        /// <summary>
+        /// 基于redis一主二从三哨兵+Haproxy反向代理的高可用环境实现的读写分离，
+        /// 优点：支持读写分离，支持高可用（环境内部实现）
+        /// 缺点：在主库切换时有一定的断连时间，切不太好判断是正在主从切换，还是整个高可用环境挂了（这个问题应该各大三方库都有）
+        /// </summary>
+        static void HaproxyTest()
+        {
+            while (true)
+            {
+                try
+                {
+                    // 创建写的Redis连接
+                    ConnectionMultiplexer writeConn = ConnectionMultiplexer.Connect("192.168.2.130:16379,password=bb123456,defaultDatabase=2");
+                    IDatabase writeDB = writeConn.GetDatabase();
+
+                    // 设置键值对
+                    writeDB.StringSet("stackExchange_Redis_haproxy",
+                        "使用StackExchange.Redis的库连接redis，读写分离通过自己区分连接来做，具体的读写转发由redis高可用环境实现");
+
+
+                    // 创建读的Redis连接
+                    ConnectionMultiplexer readConn = ConnectionMultiplexer.Connect("192.168.2.130:16378,password=bb123456,defaultDatabase=2");
+                    IDatabase readDB = readConn.GetDatabase();
+
+                    // 获取键的值
+                    string value = readDB.StringGet("stackExchange_Redis_haproxy");
                     Console.WriteLine(value);
                 }
                 catch (Exception ex)

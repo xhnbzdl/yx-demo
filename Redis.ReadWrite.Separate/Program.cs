@@ -8,7 +8,7 @@ namespace Redis.ReadWrite.Separate
     {
         static void Main(string[] args)
         {
-            HaproxyTest();
+            StackExchangeRedisSentinelTest();
         }
 
         /// <summary>
@@ -103,7 +103,7 @@ namespace Redis.ReadWrite.Separate
         /// <summary>
         /// 基于redis一主二从三哨兵+Haproxy反向代理的高可用环境实现的读写分离，
         /// 优点：支持读写分离，支持高可用（环境内部实现）
-        /// 缺点：在主库切换时有一定的断连时间，切不太好判断是正在主从切换，还是整个高可用环境挂了（这个问题应该各大三方库都有）
+        /// 缺点：在主库切换时有一定的断连时间，不太好判断是正在主从切换，还是整个高可用环境挂了（这个问题应该各大三方库都有）
         /// </summary>
         static void HaproxyTest()
         {
@@ -126,6 +126,47 @@ namespace Redis.ReadWrite.Separate
 
                     // 获取键的值
                     string value = readDB.StringGet("stackExchange_Redis_haproxy");
+                    Console.WriteLine(value);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
+                Console.ReadLine();
+            }
+        }
+
+        static void StackExchangeRedisSentinelTest()
+        {
+            while (true)
+            {
+                try
+                {
+                    // 创建 Redis Sentinel 连接
+                    ConfigurationOptions config = new ConfigurationOptions
+                    {
+                        // 设置 Redis Sentinel 的地址和端口
+                        EndPoints = { "192.168.2.130:26379", "192.168.2.148:26379", "192.168.2.149:26379" },
+                        // 设置 Redis 主节点名称
+                        ServiceName = "mymaster",
+                        // 开启读写分离
+                        AllowAdmin = false,
+                        TieBreaker = "__Booksleeve_TieBreak",
+                        // 设置密码
+                        Password = "bb123456",
+                        DefaultDatabase = 2
+                        // 其他配置...
+                    };
+
+                    ConnectionMultiplexer connection = ConnectionMultiplexer.Connect(config);
+
+                    IDatabase database = connection.GetDatabase();
+                    // 写操作（发送到主节点）
+                    database.StringSet("stackExchange_redis_sentinel", "使用StackExchange.Redis库的哨兵模式做高可用");
+
+                    // 读操作（发送到从节点）
+                    string value = database.StringGet("stackExchange_redis_sentinel");
+
                     Console.WriteLine(value);
                 }
                 catch (Exception ex)

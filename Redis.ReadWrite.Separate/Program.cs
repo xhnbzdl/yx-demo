@@ -8,11 +8,11 @@ namespace Redis.ReadWrite.Separate
     {
         static void Main(string[] args)
         {
-            StackExchangeRedisSentinelTest();
+            HaproxyTest();
         }
 
         /// <summary>
-        /// CSRedisCore的哨兵模式只是实现了高可用，并没有自带读写分离，也就是说它只是能通过哨兵自动实现切换主库链接，
+        /// CSRedisCore的哨兵模式只是实现了高可用，并没有自带读写分离，读写均走主库，也就是说它只是能通过哨兵自动实现切换主库链接，
         /// 如果使用这种方式就不需要部署haproxy来统一入口了。
         /// https://github.com/2881099/csredis/issues/238中提到CSRedisCore不会支持读写分离了。
         /// </summary>
@@ -42,8 +42,8 @@ namespace Redis.ReadWrite.Separate
         }
 
         /// <summary>
-        /// FreeRedis的主从复制+读写分离模式，不支持高可用，如果主库宕机切换，FreeRedis不会自动切换主库，
-        /// 还有一个弊端是读从库使是随机的，可能内部没有负载均衡（需要研究源码），实测情况是分发不均
+        /// FreeRedis的主从复制+读写分离模式，支持读写分离，但不支持高可用，如果主库宕机切换，FreeRedis不会自动切换主库，
+        /// 还有一个弊端是读从库时的连接是随机的，可能内部没有负载均衡（需要研究源码），实测情况是分发不均
         /// </summary>
         static void FreeRedisMasterSlaveTest()
         {
@@ -102,7 +102,7 @@ namespace Redis.ReadWrite.Separate
 
         /// <summary>
         /// 基于redis一主二从三哨兵+Haproxy反向代理的高可用环境实现的读写分离，
-        /// 优点：支持读写分离，支持高可用（环境内部实现）
+        /// 优点：支持读写分离，支持高可用（环境内部实现），支持负载均衡（实测分发均匀）
         /// 缺点：在主库切换时有一定的断连时间，不太好判断是正在主从切换，还是整个高可用环境挂了（这个问题应该各大三方库都有）
         /// </summary>
         static void HaproxyTest()
@@ -136,6 +136,9 @@ namespace Redis.ReadWrite.Separate
             }
         }
 
+        /// <summary>
+        /// StackExchangeRedis的哨兵模式，支持高可用，但不支持读写分离，读写均走主库
+        /// </summary>
         static void StackExchangeRedisSentinelTest()
         {
             while (true)

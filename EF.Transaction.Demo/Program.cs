@@ -1,5 +1,6 @@
 ﻿using EF.Transaction.Demo.Entitys;
 using Microsoft.EntityFrameworkCore;
+using System.Transactions;
 
 namespace EF.Transaction.Demo
 {
@@ -8,14 +9,27 @@ namespace EF.Transaction.Demo
         static MyDbContext dbContext = new MyDbContext();
         static void Main(string[] args)
         {
-            using (var tran = dbContext.Database.BeginTransaction())
+            var scope = new TransactionScope();
+
+            using (UnitOfWorkImpl unitOfWork = UnitOfWorkImpl.Begin())
             {
-                AddStudent4();
-                AddStudent3();
-                AddStudent2();
-                AddStudent();
-                tran.Commit();
+                var stu = new Student("TranscationScopeTest");
+                dbContext.Students.Add(stu);
+                dbContext.SaveChanges();
+                Console.WriteLine(stu.Id);
             }
+            scope.Complete();
+            scope.Dispose();
+
+
+            //using (var tran = dbContext.Database.BeginTransaction())
+            //{
+            //    AddStudent4();
+            //    AddStudent3();
+            //    AddStudent2();
+            //    AddStudent();
+            //    tran.Commit();
+            //}
         }
 
         /// <summary>
@@ -71,6 +85,29 @@ namespace EF.Transaction.Demo
             if (r % 3 == 0)
             {
                 throw new Exception("事务回滚");
+            }
+        }
+
+        class UnitOfWorkImpl : IDisposable
+        {
+            public static UnitOfWorkImpl Begin()
+            {
+                var u = new UnitOfWorkImpl();
+                u.StartTransaction();
+                return u;
+            }
+            public TransactionScope CurrentTransaction { get; set; }
+
+            public void StartTransaction()
+            {
+                CurrentTransaction = new TransactionScope();
+            }
+
+            public void Dispose()
+            {
+                CurrentTransaction.Complete();
+                CurrentTransaction.Dispose();
+                CurrentTransaction = null;
             }
         }
     }

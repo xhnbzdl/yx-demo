@@ -61,9 +61,10 @@
            dbContext.SaveChanges();
            Console.WriteLine(stu.Id);
        }
+       // 如果把 var scope = new TransactionScope(); 放到这里就不会产生事务嵌套了
        scope.Complete();
        scope.Dispose();
    }
-   ```
-
+```
+   
    

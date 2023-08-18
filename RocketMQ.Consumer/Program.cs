@@ -1,4 +1,5 @@
-﻿using NewLife.RocketMQ;
+﻿using NewLife.Log;
+using NewLife.RocketMQ;
 using NewLife.RocketMQ.Protocol;
 
 namespace RocketMQ.Consumers
@@ -17,14 +18,11 @@ namespace RocketMQ.Consumers
         {
             var consumer = new Consumer
             {
-                //Server = "http://onsaddr-internet.aliyun.com/rocketmq/nsaddr4client-internet",
-                //AccessKey = "LTAINsp1qKfO61c5",
-                //SecretKey = "BvX6DpQffUz8xKIQ0u13EMxBW6YJmp",
                 Topic = "Test",
                 Group = "测试",
                 NameServerAddress = "192.168.2.149:9876",
-                BatchSize = 1,
-                //Log = XTrace.Log,
+                BatchSize = 20,
+                Log = XTrace.Log,
             };
 
             consumer.OnConsume = (q, ms) =>

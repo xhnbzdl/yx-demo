@@ -2,6 +2,9 @@
 using MQTTnet.Client;
 using MQTTnet.Extensions.WebSocket4Net;
 using MQTTnet.Formatter;
+using System.Net.Security;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 
 namespace EMQX.Publish
 {
@@ -12,7 +15,9 @@ namespace EMQX.Publish
             await Publish_Application_Message();
             //await Connect_Client_Using_MQTTv5();
             //await Connect_Client_Using_WebSockets();
+            //await Connect_Client_Using_WebSockets_Ssl();
             //await Connect_Client_Using_WebSocket4Net();
+            //await Connect_Client_With_TLS_Encryption();
         }
 
         public static async Task Publish_Application_Message()
@@ -71,7 +76,7 @@ namespace EMQX.Publish
             using (var mqttClient = mqttFactory.CreateMqttClient())
             {
                 var mqttClientOptions = new MqttClientOptionsBuilder()
-                    .WithWebSocketServer("192.168.2.131:8083/mqtt")
+                    .WithWebSocketServer("192.168.2.131:8083/mqtt") // 使用WebSocket4Net连接8084的wss有问题
                     .Build();
 
                 var response = await mqttClient.ConnectAsync(mqttClientOptions, CancellationToken.None);
@@ -110,6 +115,41 @@ namespace EMQX.Publish
             }
         }
 
+        public static async Task Connect_Client_Using_WebSockets_Ssl()
+        {
+            /*
+             * 本示例创建了一个简单的 MQTT 客户端，并使用 WebSocket 连接连接到公共代理。
+             * 
+             * 这是 _Connect_Client_ 示例的修改版本！更多详情，请参阅其他示例。
+             */
+
+            var mqttFactory = new MqttFactory();
+
+            using (var mqttClient = mqttFactory.CreateMqttClient())
+            {
+                var mqttClientOptions = new MqttClientOptionsBuilder()
+                    .WithWebSocketServer("192.168.2.131:8084/mqtt")
+                    .WithTls(new MqttClientOptionsBuilderTlsParameters
+                    {
+                        UseTls = true,
+                        SslProtocol = SslProtocols.Tls13,
+                        CertificateValidationHandler = (eventArgs) =>
+                        {
+                            return true;
+                        }
+                    })
+                    .Build();
+
+                var response = await mqttClient.ConnectAsync(mqttClientOptions, CancellationToken.None);
+
+                Console.WriteLine("The MQTT client is connected.");
+
+                response.DumpToConsole();
+
+                Console.ReadKey();
+            }
+        }
+
         public static async Task Connect_Client_Using_MQTTv5()
         {
             /*
@@ -133,6 +173,44 @@ namespace EMQX.Publish
                 response.DumpToConsole();
 
                 Console.ReadKey();
+            }
+        }
+
+        public static async Task Connect_Client_With_TLS_Encryption()
+        {
+            /*
+             * 该示例创建了一个简单的 MQTT 客户端，并连接到启用了 TLS 加密的公共代理。
+             * 这是样本 _Connect_Client_ 的修改版！更多详情，请参阅其他示例。
+             */
+
+            var mqttFactory = new MqttFactory();
+
+            using (var mqttClient = mqttFactory.CreateMqttClient())
+            {
+                var mqttClientOptions = new MqttClientOptionsBuilder()
+                    .WithTcpServer("192.168.2.131", 8883)
+                    .WithTls(new MqttClientOptionsBuilderTlsParameters
+                    {
+                        UseTls = true,
+                        SslProtocol = SslProtocols.Tls13,
+                        // 使用的公共代理有时会有无效证书。本示例接受所有证书。不应在实时环境中使用。
+                        CertificateValidationHandler = (eventArgs) =>
+                        {
+                            return true;
+                        }
+                    })
+                    .Build();
+
+                using (var timeout = new CancellationTokenSource(5000))
+                {
+                    var response = await mqttClient.ConnectAsync(mqttClientOptions, timeout.Token);
+
+                    Console.WriteLine("The MQTT client is connected.");
+
+                    response.DumpToConsole();
+
+                    Console.ReadKey();
+                }
             }
         }
         #endregion

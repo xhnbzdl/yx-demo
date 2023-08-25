@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="MQTTnet" Version="4.2.1.781" />
+	<PackageReference Include="MQTTnet.Extensions.WebSocket4Net" Version="4.2.1.781" />
   </ItemGroup>
 
 </Project>

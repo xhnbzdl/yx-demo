@@ -20,7 +20,7 @@ namespace RocketMQ.Consumers
             {
                 Topic = "Test",
                 Group = "测试",
-                NameServerAddress = "192.168.2.149:9876",
+                NameServerAddress = "192.168.2.240:9876",
                 BatchSize = 20,
                 Log = XTrace.Log,
             };

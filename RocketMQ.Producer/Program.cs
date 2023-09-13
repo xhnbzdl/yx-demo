@@ -28,7 +28,7 @@ namespace RocketMQ.Producers
                 var producer = new Producer
                 {
                     Topic = "Test",
-                    NameServerAddress = "192.168.2.149:9876",
+                    NameServerAddress = "192.168.2.240:9876",
                     Group = "测试",
                     Log = XTrace.Log,
                 };

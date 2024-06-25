@@ -1,4 +1,6 @@
 using Hangfire;
+using Hangfire.Dashboard;
+using Hangfire.Dashboard.BasicAuthorization;
 
 namespace HangfireWebApp
 {
@@ -56,6 +58,36 @@ namespace HangfireWebApp
 
             var app = builder.Build();
 
+            #region 中间件，用于 Basic Authentication,放在swagger和hangfire前面可以限制访问两者都需要校验账户密码
+            //app.Use(async (context, next) =>
+            //{
+            //    var authHeader = context.Request.Headers["Authorization"].ToString();
+            //    if (authHeader != null && authHeader.StartsWith("Basic"))
+            //    {
+            //        var encodedUsernamePassword = authHeader.Substring("Basic ".Length).Trim();
+            //        var decodedUsernamePassword = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(encodedUsernamePassword));
+            //        var username = decodedUsernamePassword.Split(':')[0];
+            //        var password = decodedUsernamePassword.Split(':')[1];
+
+            //        if (username == "admin" && password == "admin")
+            //        {
+            //            await next.Invoke();
+            //        }
+            //        else
+            //        {
+            //            context.Response.Headers["WWW-Authenticate"] = "Basic";
+            //            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            //        }
+            //    }
+            //    else
+            //    {
+            //        // 浏览器弹框输入账户密码
+            //        context.Response.Headers["WWW-Authenticate"] = "Basic";
+            //        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            //    }
+            //});
+            #endregion
+
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
             {
@@ -78,24 +110,32 @@ namespace HangfireWebApp
         /// <param name="app"></param>
         protected static void UseHangfire(IApplicationBuilder app)
         {
-            // TODO: 判断是否启用 HangfireDashboard
-
             //配置服务最大重试次数值
             GlobalJobFilters.Filters.Add(new AutomaticRetryAttribute { Attempts = 5 });
-            //设置Hangfire服务可选参数
-            var jobOptions = new BackgroundJobServerOptions
-            {
-                //wait all jobs performed when BackgroundJobServer shutdown.
-                ShutdownTimeout = TimeSpan.FromMinutes(30),
-                Queues = new[] { "default", "jobs" }, //队列名称，只能为小写
-                WorkerCount = 3, //Environment.ProcessorCount * 5, //并发任务数 Math.Max(Environment.ProcessorCount, 20)
-                ServerName = "GCT.AbpExsoft.hangfire",
-            };
 
             //启用Hangfire仪表盘和服务器(支持使用Hangfire而不是默认的后台作业管理器)
             app.UseHangfireDashboard("/hangfire", new DashboardOptions
             {
+                // hangfire权限默认使用LocalRequestsOnlyAuthorizationFilter，只支持部署hangfire的服务器访问dashboard，只有设置为空数组才可让其他ip访问
+                //Authorization = new IDashboardAuthorizationFilter[] { },
 
+                 使用账户密码登录面板
+                Authorization = new IDashboardAuthorizationFilter[] {
+                    new BasicAuthAuthorizationFilter(new BasicAuthAuthorizationFilterOptions
+                    {
+                        RequireSsl = false,
+                        SslRedirect = false,
+                        LoginCaseSensitive = true,
+                        Users = new []
+                        {
+                            new BasicAuthAuthorizationUser
+                            {
+                                Login = "admin",
+                                PasswordClear =  "admin"
+                            }
+                        }
+                    })
+                }
             });
         }
     }

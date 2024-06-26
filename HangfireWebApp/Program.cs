@@ -117,9 +117,9 @@ namespace HangfireWebApp
             app.UseHangfireDashboard("/hangfire", new DashboardOptions
             {
                 // hangfire权限默认使用LocalRequestsOnlyAuthorizationFilter，只支持部署hangfire的服务器访问dashboard，只有设置为空数组才可让其他ip访问
-                //Authorization = new IDashboardAuthorizationFilter[] { },
+                //Authorization = new IDashboardAuthorizationFilter[] {new HangfireAuthorizationFilter() },
 
-                 使用账户密码登录面板
+                // 使用账户密码登录面板
                 Authorization = new IDashboardAuthorizationFilter[] {
                     new BasicAuthAuthorizationFilter(new BasicAuthAuthorizationFilterOptions
                     {
@@ -136,7 +136,21 @@ namespace HangfireWebApp
                         }
                     })
                 }
+
+
+                // 自定义授权方式
+                //Authorization = new IDashboardAuthorizationFilter[] { new HangfireAuthorizationFilter() },
+
             });
+        }
+    }
+
+    public class HangfireAuthorizationFilter : IDashboardAuthorizationFilter
+    {
+        public bool Authorize(DashboardContext context)
+        {
+            var httpContext = context.GetHttpContext();
+            return httpContext.User.Identity.IsAuthenticated && httpContext.User.HasClaim("DashboardAccess", "True");
         }
     }
 }

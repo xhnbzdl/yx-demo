@@ -6,9 +6,13 @@
         {
             //BankAccount.Run();
 
-            MutexLock.Run();
+            //MutexLock.Run();
 
-            
+            //SpinLockDemo.Run();
+
+            TestLock.Run();
+
+
         }
     }
 }

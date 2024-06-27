@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace LockDemo
 {
+    // 跨进程互斥锁
     public class MutexLock
     {
         public static void Run()

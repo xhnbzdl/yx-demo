@@ -12,7 +12,9 @@
 
             //TestLock.Run();
 
-            ReadWirteLock.Run();
+            //ReadWirteLock.Run();
+
+            RedisLock.RunAsync().Wait();
 
 
         }

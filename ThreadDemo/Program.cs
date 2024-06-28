@@ -4,10 +4,13 @@
     {
         static void Main()
         {
+            Console.WriteLine($"主线程ID:{Thread.CurrentThread.ManagedThreadId},开始执行");
             //ThreadDoWork();
             //ThreadPoolDoWork();
-            //TaskDoWork();
-            Sum();
+            TaskDoWork();
+            //Sum();
+
+            Console.WriteLine($"主线程ID:{Thread.CurrentThread.ManagedThreadId},执行完毕");
             Console.ReadKey();
         }
 
@@ -40,9 +43,12 @@
 
         static void TaskDoWork()
         {
-            Console.WriteLine("开始异步操作。");
-            Task.Run(() => DoWork());
-            Console.WriteLine("异步操作已启动。");
+            // Task.Run 不总是启动新线程，它会将工作项调度到任务调度器，默认情况下，任务调度器会使用线程池中的线程来执行任务。
+            // 线程池会根据负载动态分配线程，因此 Task.Run 可能会重用现有的线程池线程，而不是每次都创建新的线程
+            for (int i = 0; i < 5; i++)
+            {
+                Task.Run(() => DoWork());
+            }
         }
 
         static void Sum()
@@ -65,9 +71,9 @@
 
         static void DoWork()
         {
-            Console.WriteLine("异步操作开始执行。");
+            Console.WriteLine($"线程{Thread.CurrentThread.ManagedThreadId}异步操作开始执行。");
             Task.Delay(1000).Wait(); // 模拟执行1秒钟
-            Console.WriteLine("异步操作执行完成。");
+            Console.WriteLine($"线程{Thread.CurrentThread.ManagedThreadId}异步操作执行完成。");
         }
     }
 }

@@ -47,20 +47,20 @@ namespace LockDemo
                 {
                     try
                     {
-                        Console.WriteLine($"线程 {Thread.CurrentThread.ManagedThreadId} 获取锁并开始处理...");
-                        await Task.Delay(6000); // 模拟处理时间
-                        Console.WriteLine($"线程 {Thread.CurrentThread.ManagedThreadId} 处理完成。");
+                        Console.WriteLine($"Task{i}_线程 {Thread.CurrentThread.ManagedThreadId} 获取锁并开始处理...");
+                        Task.Delay(6000).Wait(); // 模拟处理时间，这里必须使用wait(),不能使用await，否则下面打印时线程id与开始处理时不一样，因为线程切换了
+                        Console.WriteLine($"Task{i}_线程 {Thread.CurrentThread.ManagedThreadId} 处理完成。");
                     }
                     finally
                     { 
                         await ReleaseLockAsync(lockKey);
-                        Console.WriteLine($"线程 {Thread.CurrentThread.ManagedThreadId} 释放锁。");
+                        Console.WriteLine($"Task{i}_线程 {Thread.CurrentThread.ManagedThreadId} 释放锁。");
                     }
                 }
                 else
                 {
-                    Console.WriteLine($"线程 {Thread.CurrentThread.ManagedThreadId} 未能获取锁。");
-                    i--;
+                    Console.WriteLine($"Task{i}_线程 {Thread.CurrentThread.ManagedThreadId} 未能获取锁。");
+                    //i--;
                 }
 
                 await Task.Delay(500); // 模拟其他操作的时间

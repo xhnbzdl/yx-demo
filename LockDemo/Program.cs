@@ -2,7 +2,7 @@
 {
     internal class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             //BankAccount.Run();
 
@@ -14,7 +14,7 @@
 
             //ReadWirteLock.Run();
 
-            RedisLock.RunAsync().Wait();
+            await RedisLock.RunAsync();
 
 
         }

@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace LockDemo
 {
+    /// <summary>
+    /// 读写锁
+    /// </summary>
     public class ReadWirteLock
     {
         private static ReaderWriterLockSlim rwLock = new ReaderWriterLockSlim();

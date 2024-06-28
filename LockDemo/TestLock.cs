@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 
 namespace LockDemo
 {
+    /// <summary>
+    /// 自旋锁和普通互斥锁lock的比较
+    /// </summary>
     public class TestLock
     {
 

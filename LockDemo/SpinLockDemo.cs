@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace LockDemo
 {
+    /// <summary>
+    /// 自旋锁
+    /// </summary>
     public class SpinLockDemo
     {
         // 创建一个 SpinLock 实例

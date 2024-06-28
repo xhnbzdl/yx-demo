@@ -10,7 +10,9 @@
 
             //SpinLockDemo.Run();
 
-            TestLock.Run();
+            //TestLock.Run();
+
+            ReadWirteLock.Run();
 
 
         }

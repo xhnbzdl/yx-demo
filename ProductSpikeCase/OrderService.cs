@@ -39,19 +39,19 @@ namespace ProductSpikeCase
             var lockKey = $"lock:product:{productId}";
             using (var redisLock = new RedisLock(_redisDb, lockKey))
             {
-                if (await redisLock.GetLockAsync(TimeSpan.FromSeconds(30)))
+                if (await redisLock.TryGetLockAsync(10,TimeSpan.FromSeconds(30),TimeSpan.FromSeconds(1)))
                 {
                     try
                     {
                         var productStock = (int) await _redisDb.StringGetAsync("iphone");
                         if (productStock < quantity)
                         {
+                            Console.WriteLine("error:库存不足");
                             return false; // 库存不足
                         }
-
                         productStock -= quantity;
-
-                        await _redisDb.StringSetAsync("iphone",productStock.ToString());
+                        Console.WriteLine($"success:下单成功，数量{quantity}，库存剩余{productStock}");
+                        await _redisDb.StringSetAsync("iphone",productStock);
                         return true;
                     }
                     finally
@@ -61,6 +61,7 @@ namespace ProductSpikeCase
                 }
                 else
                 {
+                    Console.WriteLine("warn:请求繁忙稍后再试");
                     return false; // 无法获取锁
                 }
             }

@@ -25,6 +25,26 @@ namespace ProductSpikeCase
         }
 
         /// <summary>
+        /// 重试机制获取锁
+        /// </summary>
+        /// <param name="clientId"></param>
+        /// <param name="retryCount"></param>
+        /// <param name="delay"></param>
+        /// <returns></returns>
+        public async Task<bool> TryGetLockAsync(int retryCount, TimeSpan timeout, TimeSpan delay)
+        {
+            for (int i = 0; i < retryCount; i++)
+            {
+                if (await _db.LockTakeAsync(_lockKey, _lockToken, timeout))
+                {
+                    return true;
+                }
+                await Task.Delay(delay);
+            }
+            return false;
+        }
+
+        /// <summary>
         /// 释放锁
         /// </summary>
         /// <returns></returns>

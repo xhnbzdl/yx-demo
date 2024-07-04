@@ -27,7 +27,6 @@ namespace ProductSpikeCase
         /// <summary>
         /// 重试机制获取锁
         /// </summary>
-        /// <param name="clientId"></param>
         /// <param name="retryCount"></param>
         /// <param name="delay"></param>
         /// <returns></returns>

@@ -50,22 +50,33 @@ namespace ProductSpikeCase.Controllers
         /// </summary>
         /// <returns></returns>
         [HttpPost]
-        public async Task<string> AddOrder()
+        public async Task<string> AddOrder(string clientId,int qty=1)
         {
             string msg = null;
-            string clientId = Guid.NewGuid().ToString();
+            //string clientId = Guid.NewGuid().ToString();
+            // 设置锁
             var isSuccess = await SetLockVersionAsync(clientId);
             if (isSuccess)
             {
                 try
                 {
+                    // 获取库存
                     int invQty = GetInvQty();
-                    if (invQty > 0)
+                    if (invQty > 0 && invQty >= qty)
                     {
-                        invQty = invQty - 1;
-                        SetInvQty(invQty);
-                        //Thread.Sleep(30000);
-                        msg = $"执行次数{count++}，扣减成功,当前库存:{invQty}";
+
+                        //Thread.Sleep(TimeSpan.FromSeconds(new Random().Next(1, 4)));
+                        Thread.Sleep(30000);
+                        // 设置库存
+                        if (await SetInvQtyAsync(qty))
+                        {
+                            msg = $"执行次数{count++}，扣减成功,当前库存:{GetInvQty()}";
+                        }
+                        else
+                        {
+                            msg = $"执行次数{count++}，扣减失败,库存不足";
+                        }
+
                     }
                     else
                     {
@@ -74,10 +85,7 @@ namespace ProductSpikeCase.Controllers
                 }
                 finally
                 {
-                    //if (clientId.Equals(_redisDb.StringGet("LockValue")))
-                    //{
-                    //    await UnLockVersionAsync();  //释放锁;
-                    //}
+                    
                     await UnLockVersionAsync(clientId);
                 }
             }
@@ -91,23 +99,43 @@ namespace ProductSpikeCase.Controllers
 
         private async Task<bool> SetLockVersionAsync(string value)
         {
-            var flag = await _redisDb.StringSetAsync("LockValue", value, TimeSpan.FromSeconds(10), When.NotExists, CommandFlags.None); //如果存在了返回false,不存在才返回true;
-            return flag;
+            for (int i = 0; i < 10; i++)
+            {
+                var flag = await _redisDb.StringSetAsync("LockValue", value, TimeSpan.FromSeconds(3), When.NotExists, CommandFlags.None); //如果存在了返回false,不存在才返回true;
+                if (flag)
+                {
+                    return true;
+                }
+                await Task.Delay(TimeSpan.FromSeconds(1));
+            }
+
+            return false;
         }
 
         private async Task<bool> UnLockVersionAsync(string value)
         {
+            var client = await _redisDb.StringGetAsync("LockValue");
 
-            //return await _redisDb.KeyDeleteAsync("LockValue");
+            if (client.IsNull || string.IsNullOrWhiteSpace(client))
+            {
+                Console.WriteLine($"{value}的锁过期");
+            }
 
-            var script = @"
-            if redis.call('GET', KEYS[1]) == ARGV[1] then
-                return redis.call('DEL', KEYS[1])
-            else
-                return 0
-            end";
-            var result = (int)await _redisDb.ScriptEvaluateAsync(script, new RedisKey[] { "LockValue" }, new RedisValue[] { value });
-            return result == 1;
+            if (value.Equals(client))
+            {
+                Console.WriteLine($"{value}释放了锁,锁值为{client}");
+                return await _redisDb.KeyDeleteAsync("LockValue");
+            }
+            
+            return false;
+            //var script = @"
+            //if redis.call('GET', KEYS[1]) == ARGV[1] then
+            //    return redis.call('DEL', KEYS[1])
+            //else
+            //    return 0
+            //end";
+            //var result = (int)await _redisDb.ScriptEvaluateAsync(script, new RedisKey[] { "LockValue" }, new RedisValue[] { value });
+            //return result == 1;
         }
         private int GetInvQty()
         {
@@ -116,9 +144,22 @@ namespace ProductSpikeCase.Controllers
             return qty;
         }
 
-        private void SetInvQty(int qty)
+        private async Task<bool> SetInvQtyAsync(int qty)
         {
-            _redisDb.StringSet("InvQty", qty);
+            //使用脚本执行redis自减操作，当库存小于扣减库存时，则不进行自减
+            var script = @"
+                local currentQty = tonumber(redis.call('GET', KEYS[1]))
+                local qtyToDecrement = tonumber(ARGV[1])
+                if currentQty and currentQty >= qtyToDecrement then
+                    redis.call('DECRBY', KEYS[1], qtyToDecrement)
+                    return 1
+                else
+                    return 0
+                end
+            ";
+
+            var result = (int)await _redisDb.ScriptEvaluateAsync(script, new RedisKey[] { "InvQty" }, new RedisValue[] { qty });
+            return result == 1;
         }
 
     }

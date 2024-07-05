@@ -43,16 +43,15 @@ namespace ProductSpikeCase
                 {
                     try
                     {
-                        var productStock = (int) await _redisDb.StringGetAsync("iphone");
-                        if (productStock < quantity)
+                        Thread.Sleep(30000);
+                        if (await SetInvQtyAsync(quantity))
                         {
-                            Console.WriteLine("error:库存不足");
-                            return false; // 库存不足
+                            var productStock = (int)await _redisDb.StringGetAsync("iphone");
+                            Console.WriteLine($"success:下单成功，数量{quantity}，库存剩余{productStock}");
+                            return true;
                         }
-                        productStock -= quantity;
-                        Console.WriteLine($"success:下单成功，数量{quantity}，库存剩余{productStock}");
-                        await _redisDb.StringSetAsync("iphone",productStock);
-                        return true;
+                        Console.WriteLine("error:库存不足");
+                        return false; // 库存不足
                     }
                     finally
                     {
@@ -65,6 +64,23 @@ namespace ProductSpikeCase
                     return false; // 无法获取锁
                 }
             }
+        }
+        private async Task<bool> SetInvQtyAsync(int qty)
+        {
+            //使用脚本执行redis自减操作，当库存小于扣减库存时，则不进行自减
+            var script = @"
+                local currentQty = tonumber(redis.call('GET', KEYS[1]))
+                local qtyToDecrement = tonumber(ARGV[1])
+                if currentQty and currentQty >= qtyToDecrement then
+                    redis.call('DECRBY', KEYS[1], qtyToDecrement)
+                    return 1
+                else
+                    return 0
+                end
+            ";
+
+            var result = (int)await _redisDb.ScriptEvaluateAsync(script, new RedisKey[] { "iphone" }, new RedisValue[] { qty });
+            return result == 1;
         }
     }
 }

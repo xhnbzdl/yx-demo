@@ -60,23 +60,12 @@ namespace ProductSpikeCase.Controllers
             {
                 try
                 {
-                    // 获取库存
-                    int invQty = GetInvQty();
-                    if (invQty > 0 && invQty >= qty)
+                    // 扣减库存
+                    if (await SetInvQtyAsync(qty))
                     {
-
                         //Thread.Sleep(TimeSpan.FromSeconds(new Random().Next(1, 4)));
-                        Thread.Sleep(30000);
-                        // 设置库存
-                        if (await SetInvQtyAsync(qty))
-                        {
-                            msg = $"执行次数{count++}，扣减成功,当前库存:{GetInvQty()}";
-                        }
-                        else
-                        {
-                            msg = $"执行次数{count++}，扣减失败,库存不足";
-                        }
-
+                        //Thread.Sleep(30000);
+                        msg = $"执行次数{count++}，扣减成功,当前库存:{GetInvQty()}";
                     }
                     else
                     {
@@ -114,28 +103,32 @@ namespace ProductSpikeCase.Controllers
 
         private async Task<bool> UnLockVersionAsync(string value)
         {
-            var client = await _redisDb.StringGetAsync("LockValue");
+            //var client = await _redisDb.StringGetAsync("LockValue");
 
-            if (client.IsNull || string.IsNullOrWhiteSpace(client))
-            {
-                Console.WriteLine($"{value}的锁过期");
-            }
+            //if (client.IsNull || string.IsNullOrWhiteSpace(client))
+            //{
+            //    Console.WriteLine($"{value}的锁过期");
+            //}
 
-            if (value.Equals(client))
+            //if (value.Equals(client))
+            //{
+            //    Console.WriteLine($"{value}释放了锁,锁值为{client}");
+            //    return await _redisDb.KeyDeleteAsync("LockValue");
+            //}
+
+            //return false;
+            var script = @"
+            if redis.call('GET', KEYS[1]) == ARGV[1] then
+                return redis.call('DEL', KEYS[1])
+            else
+                return 0
+            end";
+            var result = (int)await _redisDb.ScriptEvaluateAsync(script, new RedisKey[] { "LockValue" }, new RedisValue[] { value });
+            if (result != 1)
             {
-                Console.WriteLine($"{value}释放了锁,锁值为{client}");
-                return await _redisDb.KeyDeleteAsync("LockValue");
+                Console.WriteLine($"{value}锁释放失败，锁过期");
             }
-            
-            return false;
-            //var script = @"
-            //if redis.call('GET', KEYS[1]) == ARGV[1] then
-            //    return redis.call('DEL', KEYS[1])
-            //else
-            //    return 0
-            //end";
-            //var result = (int)await _redisDb.ScriptEvaluateAsync(script, new RedisKey[] { "LockValue" }, new RedisValue[] { value });
-            //return result == 1;
+            return result == 1;
         }
         private int GetInvQty()
         {
